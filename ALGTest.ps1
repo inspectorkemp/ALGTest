@@ -1,3 +1,20 @@
+# Prompt the user for the SIP server (IP address or hostname)
+$SIPServer = Read-Host "Enter the SIP server (IP address or hostname)"
+$SIPPort = 5060  # Default SIP UDP port
+
+# Validate and resolve the SIP server
+if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
+    $RemoteIPAddress = [System.Net.IPAddress]::Parse($SIPServer)
+} else {
+    try {
+        $ResolvedIP = Resolve-DnsName -Name $SIPServer -ErrorAction Stop | Select-Object -First 1 -ExpandProperty IPAddress
+        $RemoteIPAddress = [System.Net.IPAddress]::Parse($ResolvedIP)
+    } catch {
+        Write-Host "Failed to resolve DNS name for $SIPServer. Please check the hostname and try again." -ForegroundColor Red
+        exit
+    }
+}
+
 # Define the SIP request
 $SIPRequest = @"
 OPTIONS sip:example.com SIP/2.0
@@ -10,22 +27,6 @@ CSeq: 1 OPTIONS
 Content-Length: 0
 
 "@ -replace "`n", "`r`n"  # Ensure correct SIP formatting with CRLF
-
-# Specify the external SIP server and port
-$SIPServer = "192.168.1.1"  # Replace with an actual SIP server IP or domain
-$SIPPort = 5060
-
-# Check if the SIP server is an IP address or needs DNS resolution
-if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
-    $RemoteIPAddress = [System.Net.IPAddress]::Parse($SIPServer)
-} else {
-    try {
-        $RemoteIPAddress = [System.Net.IPAddress]::Parse((Resolve-DnsName -Name $SIPServer | Select-Object -First 1).IPAddress)
-    } catch {
-        Write-Host "Failed to resolve DNS name for $SIPServer" -ForegroundColor Red
-        return
-    }
-}
 
 # Create a UDP client
 $UDPClient = New-Object System.Net.Sockets.UdpClient
@@ -55,12 +56,12 @@ try {
 
         # Analyze the response
         if ($ResponseMessage -match "Via: SIP/2.0/UDP .*;rport=.*;branch=") {
-            Write-Host "SIP ALG is likely enabled on the gateway. The 'Via' header has been modified." -ForegroundColor Red
+            Write-Host "SIP ALG is likely ENABLED on the gateway. The 'Via' header has been modified." -ForegroundColor Red
         } else {
-            Write-Host "SIP ALG is likely disabled. The 'Via' header appears intact." -ForegroundColor Green
+            Write-Host "SIP ALG is likely DISABLED. The 'Via' header appears intact." -ForegroundColor Green
         }
     } else {
-        Write-Host "No response received from the server. SIP ALG may not be interfering." -ForegroundColor Yellow
+        Write-Host "No response received from the server. SIP ALG may not be interfering or the server did not respond." -ForegroundColor Yellow
     }
 } catch {
     Write-Host "An error occurred: $_" -ForegroundColor Red
