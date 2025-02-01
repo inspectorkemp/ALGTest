@@ -62,7 +62,7 @@ try {
             Write-Host "✅ SIP ALG is likely DISABLED. The 'Via' header appears intact." -ForegroundColor Green
         }
     } else {
-        Write-Host "⚠ No response received from the server. SIP ALG may not be interfering, or the server did not respond." -ForegroundColor Yellow
+        Write-Host "⚠ No response received from the server. SIP ALG may not be interfering, or the server did not respond." -ForegroundColor Yellow -BackgroundColor Green
     }
 } catch {
     Write-Host "❌ An error occurred: $_" -ForegroundColor Red
