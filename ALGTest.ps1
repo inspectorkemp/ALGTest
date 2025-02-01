@@ -1,6 +1,7 @@
 # Prompt the user for the SIP server (IP address or hostname)
 $SIPServer = Read-Host "Enter the SIP server (IP address or hostname)"
-$SIPPort = 5060  # Default SIP UDP port
+# Prompt the user for the UDP port
+$SIPPort = Read-Host "Enter SIP UDP Port (5060 is typically default)" 
 
 # Validate and resolve the SIP server
 if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
@@ -10,7 +11,7 @@ if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
         $ResolvedIP = Resolve-DnsName -Name $SIPServer -ErrorAction Stop | Select-Object -First 1 -ExpandProperty IPAddress
         $RemoteIPAddress = [System.Net.IPAddress]::Parse($ResolvedIP)
     } catch {
-        Write-Host "Failed to resolve DNS name for $SIPServer. Please check the hostname and try again." -ForegroundColor Red
+        Write-Host "Failed to resolve DNS name for $SIPServer. Please check the hostname or DNS server IP address and try again." -ForegroundColor Red
         exit
     }
 }
