@@ -1,8 +1,7 @@
+
 # Prompt the user for the SIP server (IP address or hostname)
 $SIPServer = Read-Host "Enter the SIP server (IP address or hostname)"
-# Prompt the user for the UDP port
-$SIPPort = Read-Host "Enter SIP UDP Port (5060 is typically default)" 
-if($null -eq $SIPPort) {$SIPPort = 5060}
+$SIPPort = 5060  # Default SIP UDP port
 
 # Validate and resolve the SIP server
 if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
@@ -12,7 +11,7 @@ if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
         $ResolvedIP = Resolve-DnsName -Name $SIPServer -ErrorAction Stop | Select-Object -First 1 -ExpandProperty IPAddress
         $RemoteIPAddress = [System.Net.IPAddress]::Parse($ResolvedIP)
     } catch {
-        Write-Host "Failed to resolve DNS name for $SIPServer. Please check the hostname or DNS server IP address and try again." -ForegroundColor Red
+        Write-Host "❌ Failed to resolve DNS name for $SIPServer. Please check the hostname and try again." -ForegroundColor Red
         exit
     }
 }
@@ -39,7 +38,7 @@ try {
     $RequestBytes = [System.Text.Encoding]::ASCII.GetBytes($SIPRequest)
     $UDPClient.Send($RequestBytes, $RequestBytes.Length, $RemoteEndPoint)
 
-    Write-Host ("SIP request sent to {0}:{1}" -f $RemoteIPAddress, $SIPPort) -ForegroundColor Green
+    Write-Host ("✅ SIP request sent to {0}:{1}" -f $RemoteIPAddress, $SIPPort) -ForegroundColor Green
 
     # Wait for a response
     $ResponseEndPoint = $null
@@ -53,20 +52,20 @@ try {
     if ($UDPClient.Available -gt 0) {
         $ResponseBytes = $UDPClient.Receive([ref]$ResponseEndPoint)
         $ResponseMessage = [System.Text.Encoding]::ASCII.GetString($ResponseBytes)
-        Write-Host "Response received:" -ForegroundColor Green
+        Write-Host "✅ Response received:" -ForegroundColor Green
         Write-Host $ResponseMessage
 
         # Analyze the response
         if ($ResponseMessage -match "Via: SIP/2.0/UDP .*;rport=.*;branch=") {
-            Write-Host "SIP ALG is likely ENABLED on the gateway. The 'Via' header has been modified." -ForegroundColor Red
+            Write-Host "🚨 SIP ALG is likely ENABLED on the gateway. The 'Via' header has been modified." -ForegroundColor Red
         } else {
-            Write-Host "SIP ALG is likely DISABLED. The 'Via' header appears intact." -ForegroundColor Green
+            Write-Host "✅ SIP ALG is likely DISABLED. The 'Via' header appears intact." -ForegroundColor Green
         }
     } else {
-        Write-Host "No response received from the server. SIP ALG may not be interfering or the server did not respond." -ForegroundColor Yellow
+        Write-Host "⚠ No response received from the server. SIP ALG may not be interfering, or the server did not respond." -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "An error occurred: $_" -ForegroundColor Red
+    Write-Host "❌ An error occurred: $_" -ForegroundColor Red
 } finally {
     # Close the UDP client
     $UDPClient.Close()
