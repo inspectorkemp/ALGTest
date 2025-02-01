@@ -2,6 +2,7 @@
 $SIPServer = Read-Host "Enter the SIP server (IP address or hostname)"
 # Prompt the user for the UDP port
 $SIPPort = Read-Host "Enter SIP UDP Port (5060 is typically default)" 
+if($null -eq $SIPPort) {$SIPPort = 5060}
 
 # Validate and resolve the SIP server
 if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
