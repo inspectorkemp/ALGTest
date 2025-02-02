@@ -11,10 +11,10 @@ function Test-FirewallRule {
         Get-NetFirewallPortFilter | Where-Object { $_.Protocol -eq 'UDP' -and $_.LocalPort -eq '5060' }
 
     if ($firewallRule) {
-        Write-Host "✅ Firewall check: An outbound rule for UDP 5060 exists." -ForegroundColor Green
+        Write-Host "Firewall check: An outbound rule for UDP 5060 exists." -ForegroundColor Green
     } else {
-        Write-Host "⚠ WARNING: No firewall rule allowing outbound UDP 5060 was found!" -ForegroundColor Yellow
-        Write-Host "   The test may fail if the firewall blocks traffic." -ForegroundColor Yellow
+        Write-Host "WARNING: No firewall rule allowing outbound UDP 5060 was found!" -ForegroundColor Yellow
+        Write-Host "The test may fail if the firewall blocks traffic." -ForegroundColor Yellow
     }
 }
 
@@ -90,12 +90,12 @@ try {
 
         # Analyze the response for SIP ALG detection
         if ($ResponseMessage -match "Via: SIP/2.0/UDP .*;rport=.*;branch=") {
-            Write-Host "🚨 SIP ALG is likely ENABLED on the gateway. The 'Via' header has been modified." -ForegroundColor Red
+            Write-Host "SIP ALG is likely ENABLED on the gateway. The 'Via' header has been modified." -ForegroundColor Red
         } else {
-            Write-Host "✅ SIP ALG is likely DISABLED. The 'Via' header appears intact." -ForegroundColor Green
+            Write-Host "SIP ALG is likely DISABLED. The 'Via' header appears intact." -ForegroundColor Green
         }
     } else {
-        Write-Host "⚠ No response received from the server. SIP ALG may not be interfering, the address entered is incorrect, or the server did not respond." -ForegroundColor Yellow
+        Write-Host "No response received from the server. SIP ALG may not be interfering, the address entered is incorrect, or the server did not respond." -ForegroundColor Yellow
     }
 } catch {
     Write-Host "An error occurred: $_" -ForegroundColor Red
