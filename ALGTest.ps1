@@ -20,12 +20,12 @@ function Test-FirewallRule {
 
 # Admin check
 if (Test-IsAdmin) {
-    Write-Host "🔹 Running as Administrator. Checking firewall rules..." -ForegroundColor Cyan
+    Write-Host "Running as Administrator. Checking firewall rules..." -ForegroundColor Cyan
     Test-FirewallRule
 } else {
-    Write-Host "⚠ WARNING: This script is NOT running as Administrator!" -ForegroundColor Yellow
-    Write-Host "   Firewall rules cannot be checked without Admin privileges." -ForegroundColor Yellow
-    Write-Host "   If you want the firewall check, re-run this script as Administrator." -ForegroundColor Yellow
+    Write-Host "WARNING: This script is NOT running as Administrator!" -ForegroundColor Yellow
+    Write-Host "Firewall rules cannot be checked without Admin privileges." -ForegroundColor Yellow
+    Write-Host "If you want the firewall check, re-run this script as Administrator." -ForegroundColor Yellow
 }
 
 # Prompt the user for the SIP server (IP address or hostname)
@@ -37,28 +37,28 @@ if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
     $RemoteIPAddress = [System.Net.IPAddress]::Parse($SIPServer)
 } else {
     try {
-        Write-Host "🔍 Resolving DNS for ${SIPServer}..." -ForegroundColor Cyan
+        Write-Host "Resolving DNS for $SIPServer..." -ForegroundColor Cyan
         $ResolvedIP = Resolve-DnsName -Name $SIPServer -ErrorAction Stop | Select-Object -First 1 -ExpandProperty IPAddress
         $RemoteIPAddress = [System.Net.IPAddress]::Parse($ResolvedIP)
-        Write-Host "✅ Resolved ${SIPServer} to IP: $RemoteIPAddress" -ForegroundColor Green
+        Write-Host "Resolved $SIPServer to IP: $RemoteIPAddress" -ForegroundColor Green
     } catch {
-        Write-Host "❌ Failed to resolve DNS name for ${SIPServer}. Please check the hostname and try again." -ForegroundColor Red
+        Write-Host "Failed to resolve DNS name for $SIPServer. Please check the hostname and try again." -ForegroundColor Red
         exit
     }
 }
 
 # Define the SIP request
 $SIPRequest = @"
-OPTIONS sip:${SIPServer} SIP/2.0
+OPTIONS sip:$SIPServer SIP/2.0
 Via: SIP/2.0/UDP 192.0.2.1:5060;branch=z9hG4bK-524287-1---e81234abcd;rport
 Max-Forwards: 70
-To: <sip:${SIPServer}>
-From: <sip:test@${SIPServer}>;tag=abcd1234
-Call-ID: 12345678@${SIPServer}
+To: <sip:$SIPServer>
+From: <sip:test@$SIPServer>;tag=abcd1234
+Call-ID: 12345678@$SIPServer
 CSeq: 1 OPTIONS
 Content-Length: 0
 
-"@ -replace "`n", "`r`n"  # Ensure correct SIP formatting with CRLF
+"@
 
 # Create a UDP client
 $UDPClient = New-Object System.Net.Sockets.UdpClient
@@ -68,7 +68,7 @@ try {
     $RemoteEndPoint = New-Object System.Net.IPEndPoint $RemoteIPAddress, $SIPPort
     $RequestBytes = [System.Text.Encoding]::ASCII.GetBytes($SIPRequest)
     
-    Write-Host ("📤 Sending SIP request to {0}:{1}..." -f $RemoteIPAddress, $SIPPort) -ForegroundColor Cyan
+    Write-Host ("Sending SIP request to {0}:{1}..." -f $RemoteIPAddress, $SIPPort) -ForegroundColor Cyan
     $UDPClient.Send($RequestBytes, $RequestBytes.Length, $RemoteEndPoint)
 
     # Wait for a response
@@ -85,7 +85,7 @@ try {
         $ResponseBytes = $UDPClient.Receive([ref]$ResponseEndPoint)
         $ResponseMessage = [System.Text.Encoding]::ASCII.GetString($ResponseBytes)
         
-        Write-Host "✅ Response received from ${SIPServer}:" -ForegroundColor Green
+        Write-Host "Response received from ${SIPServer}:" -ForegroundColor Green
         Write-Host $ResponseMessage
 
         # Analyze the response for SIP ALG detection
@@ -98,7 +98,7 @@ try {
         Write-Host "⚠ No response received from the server. SIP ALG may not be interfering, the address entered is incorrect, or the server did not respond." -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "❌ An error occurred: $_" -ForegroundColor Red
+    Write-Host "An error occurred: $_" -ForegroundColor Red
 } finally {
     # Close the UDP client
     $UDPClient.Close()
