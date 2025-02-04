@@ -14,7 +14,7 @@ function Test-FirewallRule {
         Write-Host "Firewall check: An outbound rule for UDP 5060 exists." -ForegroundColor Green
     } else {
         Write-Host "WARNING: No firewall rule allowing outbound UDP 5060 was found!" -ForegroundColor Yellow
-        Write-Host "The test may fail if the firewall blocks traffic." -ForegroundColor Yellow
+        Write-Host "   The test may fail if the firewall blocks traffic." -ForegroundColor Yellow
     }
 }
 
@@ -24,8 +24,8 @@ if (Test-IsAdmin) {
     Test-FirewallRule
 } else {
     Write-Host "WARNING: This script is NOT running as Administrator!" -ForegroundColor Yellow
-    Write-Host "Firewall rules cannot be checked without Admin privileges." -ForegroundColor Yellow
-    Write-Host "If you want the firewall check, re-run this script as Administrator." -ForegroundColor Yellow
+    Write-Host "   Firewall rules cannot be checked without Admin privileges." -ForegroundColor Yellow
+    Write-Host "   If you want the firewall check, re-run this script as Administrator." -ForegroundColor Yellow
 }
 
 # Prompt the user for the SIP server (IP address or hostname)
@@ -37,28 +37,28 @@ if ([System.Net.IPAddress]::TryParse($SIPServer, [ref]$null)) {
     $RemoteIPAddress = [System.Net.IPAddress]::Parse($SIPServer)
 } else {
     try {
-        Write-Host "Resolving DNS for $SIPServer..." -ForegroundColor Cyan
+        Write-Host "Resolving DNS for ${SIPServer}..." -ForegroundColor Cyan
         $ResolvedIP = Resolve-DnsName -Name $SIPServer -ErrorAction Stop | Select-Object -First 1 -ExpandProperty IPAddress
         $RemoteIPAddress = [System.Net.IPAddress]::Parse($ResolvedIP)
-        Write-Host "Resolved $SIPServer to IP: $RemoteIPAddress" -ForegroundColor Green
+        Write-Host "Resolved ${SIPServer} to IP: $RemoteIPAddress" -ForegroundColor Green
     } catch {
-        Write-Host "Failed to resolve DNS name for $SIPServer. Please check the hostname and try again." -ForegroundColor Red
+        Write-Host "Failed to resolve DNS name for ${SIPServer}. Please check the hostname and try again." -ForegroundColor Red
         exit
     }
 }
 
 # Define the SIP request
 $SIPRequest = @"
-OPTIONS sip:$SIPServer SIP/2.0
+OPTIONS sip:${SIPServer} SIP/2.0
 Via: SIP/2.0/UDP 192.0.2.1:5060;branch=z9hG4bK-524287-1---e81234abcd;rport
 Max-Forwards: 70
-To: <sip:$SIPServer>
-From: <sip:test@$SIPServer>;tag=abcd1234
-Call-ID: 12345678@$SIPServer
+To: <sip:${SIPServer}>
+From: <sip:test@${SIPServer}>;tag=abcd1234
+Call-ID: 12345678@${SIPServer}
 CSeq: 1 OPTIONS
 Content-Length: 0
 
-"@
+"@ -replace "`n", "`r`n"  # Ensure correct SIP formatting with CRLF
 
 # Create a UDP client
 $UDPClient = New-Object System.Net.Sockets.UdpClient
@@ -68,7 +68,7 @@ try {
     $RemoteEndPoint = New-Object System.Net.IPEndPoint $RemoteIPAddress, $SIPPort
     $RequestBytes = [System.Text.Encoding]::ASCII.GetBytes($SIPRequest)
     
-    Write-Host ("Sending SIP request to {0}:{1}..." -f $RemoteIPAddress, $SIPPort) -ForegroundColor Cyan
+    Write-Host ("📤 Sending SIP request to {0}:{1}..." -f $RemoteIPAddress, $SIPPort) -ForegroundColor Cyan
     $UDPClient.Send($RequestBytes, $RequestBytes.Length, $RemoteEndPoint)
 
     # Wait for a response
@@ -89,8 +89,18 @@ try {
         Write-Host $ResponseMessage
 
         # Analyze the response for SIP ALG detection
-        if ($ResponseMessage -match "Via: SIP/2.0/UDP .*;rport=.*;branch=") {
-            Write-Host "SIP ALG is likely ENABLED on the gateway. The 'Via' header has been modified." -ForegroundColor Red
+        if ($ResponseMessage -match "Via: SIP/2.0/UDP ([^;]+);branch=.*") {
+            $ReceivedIP = $matches[1]
+            
+            if ($ReceivedIP -ne "192.0.2.1") {
+                Write-Host "SIP ALG DETECTED: The 'Via' header IP has changed from 192.0.2.1 to $ReceivedIP." -ForegroundColor Red
+            }
+            if ($ResponseMessage -match "rport" -and $ResponseMessage -notmatch "rport=") {
+                Write-Host "SIP ALG DETECTED: The 'rport' parameter was removed." -ForegroundColor Red
+            }
+            if ($ResponseMessage -match ";received=") {
+                Write-Host "SIP ALG WARNING: The 'received' parameter was added to the 'Via' header." -ForegroundColor Yellow
+            }
         } else {
             Write-Host "SIP ALG is likely DISABLED. The 'Via' header appears intact." -ForegroundColor Green
         }
